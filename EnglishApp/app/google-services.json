@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "514349033714",
+    "project_id": "talkifyapp-3ecc6",
+    "storage_bucket": "talkifyapp-3ecc6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:514349033714:android:3b214c5ed5bb51ab89486b",
+        "android_client_info": {
+          "package_name": "com.example.englishapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsqSzaIk-IsIhsJ5FCYh1xBm9XGj9Avu8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
