@@ -1,54 +1,55 @@
 package com.example.englishapp.ui.screens
 
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
 import com.example.englishapp.data.Session
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.englishapp.ui.components.AppBottomBar
 import com.example.englishapp.ui.components.Tab
 
@@ -105,7 +106,7 @@ fun HomeScreen(
                 Spacer(Modifier.weight(1f))
             }
 
-            DailyTaskCard()
+            DailyTaskCard(onLessons = onLessons, onPractice = onPractice)
         }
         AppBottomBar(selected = Tab.Inicio, activeColor = Color(0xFF2563EB), onSelect = onTab)
     }
@@ -319,29 +320,68 @@ private fun FeatureCard(
 }
 
 @Composable
-private fun DailyTaskCard() {
+private fun DailyTaskCard(onLessons: () -> Unit, onPractice: () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
-    Row(
+    val lessonDone = Session.todayLessons >= 1
+    val practiceDone = Session.todayPractices >= 1
+    val done = (if (lessonDone) 1 else 0) + (if (practiceDone) 1 else 0)
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(1.dp, shape)
             .clip(shape)
             .background(Color.White)
             .border(1.dp, Color(0xFFF1F5F9), shape)
-            .clickable { }
-            .padding(start = 17.dp, end = 17.dp, top = 21.dp, bottom = 17.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(17.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text("Hoy", color = Color(0xFF1E293B), fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold)
-            Text(
-                "Completa 1 lección y 1 práctica",
-                color = Color(0xFF475569),
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
+            Text("$done/2", color = Color(0xFF64748B), fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold)
+        }
+        Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Color(0xFFE2E8F0))) {
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(done / 2f)
+                    .background(Color(0xFF10B981), CircleShape)
             )
         }
-        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(20.dp))
+        DailyTaskRow("Completa 1 lección", lessonDone, onLessons)
+        DailyTaskRow("Completa 1 práctica", practiceDone, onPractice)
+        if (done == 2) {
+            Text("¡Meta del día cumplida!", color = Color(0xFF10B981), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun DailyTaskRow(label: String, done: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint = if (done) Color(0xFF10B981) else Color(0xFFCBD5E1),
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            label,
+            color = if (done) Color(0xFF94A3B8) else Color(0xFF475569),
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            modifier = Modifier.weight(1f).padding(start = 10.dp),
+        )
+        Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(18.dp))
     }
 }

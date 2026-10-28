@@ -13,7 +13,8 @@ import kotlinx.coroutines.tasks.await
 /**
  * Firebase Authentication (usuarios) + Cloud Firestore (progreso):
  *   users/{uid}                    -> { name, email }
- *   users/{uid}/progress/{lessonId} -> { best, last, attempts }
+ *   users/{uid}/progress/{lessonId} -> { best, last, attempts }   (ids 1..5 lecciones, 101..103 vocabulario)
+ *   users/{uid}/meta/stats          -> palabras, tiempo, racha, meta de hoy y banner
  */
 class FirebaseBackend : Backend {
     private val auth = FirebaseAuth.getInstance()
@@ -72,5 +73,42 @@ class FirebaseBackend : Backend {
         db.collection("users").document(uid).collection("progress").document(lessonId.toString())
             .set(mapOf("best" to progress.best, "last" to progress.last, "attempts" to progress.attempts))
             .await()
+    }
+    private fun statsDoc(uid: String) =
+        db.collection("users").document(uid).collection("meta").document("stats")
+
+    override suspend fun loadStats(): UserStats {
+        val uid = auth.currentUser?.uid ?: return UserStats()
+        val d = statsDoc(uid).get().await()
+        if (!d.exists()) return UserStats()
+        val words = (d.get("words") as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
+        return UserStats(
+            words = words,
+            studySeconds = d.getLong("studySeconds") ?: 0L,
+            streak = d.getLong("streak")?.toInt() ?: 0,
+            lastDay = d.getString("lastDay") ?: "",
+            todayDate = d.getString("todayDate") ?: "",
+            todayLessons = d.getLong("todayLessons")?.toInt() ?: 0,
+            todayPractices = d.getLong("todayPractices")?.toInt() ?: 0,
+            todaySeconds = d.getLong("todaySeconds") ?: 0L,
+            banner = d.getLong("banner")?.toInt() ?: 0,
+        )
+    }
+
+    override suspend fun saveStats(stats: UserStats) {
+        val uid = auth.currentUser?.uid ?: return
+        statsDoc(uid).set(
+            mapOf(
+                "words" to stats.words.toList(),
+                "studySeconds" to stats.studySeconds,
+                "streak" to stats.streak,
+                "lastDay" to stats.lastDay,
+                "todayDate" to stats.todayDate,
+                "todayLessons" to stats.todayLessons,
+                "todayPractices" to stats.todayPractices,
+                "todaySeconds" to stats.todaySeconds,
+                "banner" to stats.banner,
+            )
+        ).await()
     }
 }

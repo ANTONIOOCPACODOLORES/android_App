@@ -1,6 +1,8 @@
 package com.example.englishapp.data
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -49,9 +51,9 @@ class LocalBackend(context: Context) : Backend {
 
     override suspend fun loadProgress(): Map<Int, LessonProgress> {
         val e = prefs.getString("session", null) ?: return emptyMap()
-        return LessonCatalog.mapNotNull { l ->
-            prefs.getString("prog_${e}_${l.id}", null)?.split(",")?.takeIf { it.size == 3 }?.let { p ->
-                l.id to LessonProgress(p[0].toInt(), p[1].toInt(), p[2].toInt())
+        return ProgressIds.mapNotNull { id ->
+            prefs.getString("prog_${e}_$id", null)?.split(",")?.takeIf { it.size == 3 }?.let { p ->
+                id to LessonProgress(p[0].toInt(), p[1].toInt(), p[2].toInt())
             }
         }.toMap()
     }
@@ -61,5 +63,45 @@ class LocalBackend(context: Context) : Backend {
         prefs.edit()
             .putString("prog_${e}_$lessonId", "${progress.best},${progress.last},${progress.attempts}")
             .apply()
+    }
+    override suspend fun loadStats(): UserStats {
+        val e = prefs.getString("session", null) ?: return UserStats()
+        val raw = prefs.getString("stats_$e", null) ?: return UserStats()
+        return try {
+            val o = JSONObject(raw)
+            val arr = o.optJSONArray("words")
+            val words = HashSet<String>()
+            if (arr != null) {
+                for (i in 0 until arr.length()) words.add(arr.getString(i))
+            }
+            UserStats(
+                words = words,
+                studySeconds = o.optLong("studySeconds"),
+                streak = o.optInt("streak"),
+                lastDay = o.optString("lastDay"),
+                todayDate = o.optString("todayDate"),
+                todayLessons = o.optInt("todayLessons"),
+                todayPractices = o.optInt("todayPractices"),
+                todaySeconds = o.optLong("todaySeconds"),
+                banner = o.optInt("banner"),
+            )
+        } catch (_: Exception) {
+            UserStats()
+        }
+    }
+
+    override suspend fun saveStats(stats: UserStats) {
+        val e = prefs.getString("session", null) ?: return
+        val o = JSONObject()
+        o.put("words", JSONArray(stats.words.toList()))
+        o.put("studySeconds", stats.studySeconds)
+        o.put("streak", stats.streak)
+        o.put("lastDay", stats.lastDay)
+        o.put("todayDate", stats.todayDate)
+        o.put("todayLessons", stats.todayLessons)
+        o.put("todayPractices", stats.todayPractices)
+        o.put("todaySeconds", stats.todaySeconds)
+        o.put("banner", stats.banner)
+        prefs.edit().putString("stats_$e", o.toString()).apply()
     }
 }

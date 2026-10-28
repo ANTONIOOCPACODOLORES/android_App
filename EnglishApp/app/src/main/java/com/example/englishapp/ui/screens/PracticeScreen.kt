@@ -1,5 +1,9 @@
 package com.example.englishapp.ui.screens
 
+import com.example.englishapp.data.isVocabTopic
+import com.example.englishapp.data.vocabQuestions
+import com.example.englishapp.data.VocabTopics
+import com.example.englishapp.ui.components.TrackStudyTime
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableIntStateOf
@@ -71,7 +75,10 @@ import androidx.compose.ui.unit.sp
 fun PracticeScreen(lessonId: Int?, onClose: () -> Unit, onFinish: () -> Unit) {
     var attempt by remember { mutableIntStateOf(0) }
     val questions = remember(lessonId, attempt) {
-        val pool = if (lessonId == null) QuestionBank else QuestionBank.filter { it.lessonId == lessonId }
+        val id = lessonId
+        val pool = if (id == null) QuestionBank
+        else if (isVocabTopic(id)) vocabQuestions(id)
+        else QuestionBank.filter { it.lessonId == id }
         pool.shuffled().take(10)
     }
     var index by remember(lessonId, attempt) { mutableIntStateOf(0) }
@@ -79,6 +86,7 @@ fun PracticeScreen(lessonId: Int?, onClose: () -> Unit, onFinish: () -> Unit) {
     var correctCount by remember(lessonId, attempt) { mutableIntStateOf(0) }
     var finished by remember(lessonId, attempt) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    TrackStudyTime()
 
     if (finished) {
         ResultView(lessonId, correctCount, questions.size, onRetry = { attempt++ }, onExit = onFinish)
@@ -153,7 +161,10 @@ fun PracticeScreen(lessonId: Int?, onClose: () -> Unit, onFinish: () -> Unit) {
                         onClick = {
                             if (!answered) {
                                 selected = i
-                                if (i == q.answer) correctCount++
+                                if (i == q.answer) {
+                                    correctCount++
+                                    q.wordKey?.let { Session.markWordLearned(it) }
+                                }
                             }
                         },
                     )
@@ -187,6 +198,8 @@ fun PracticeScreen(lessonId: Int?, onClose: () -> Unit, onFinish: () -> Unit) {
                             finished = true
                             if (lessonId != null) {
                                 scope.launch { Session.saveLessonResult(lessonId, correctCount, questions.size) }
+                            } else {
+                                Session.recordPractice()
                             }
                         }
                     },
@@ -220,7 +233,10 @@ private fun ResultView(lessonId: Int?, correct: Int, total: Int, onRetry: () -> 
     val pct = if (total == 0) 0 else correct * 100 / total
     val passed = pct >= Session.PASS_PERCENT
     val saved = lessonId?.let { Session.progress[it] }
-    val lessonTitle = lessonId?.let { id -> LessonCatalog.firstOrNull { it.id == id }?.title }
+    val lessonTitle = lessonId?.let { id ->
+        LessonCatalog.firstOrNull { it.id == id }?.title
+            ?: VocabTopics.firstOrNull { it.id == id }?.let { t -> "Vocabulario: ${t.name}" }
+    }
     val ringColor = if (passed) Color(0xFF10B981) else Color(0xFF1967D2)
 
     Column(

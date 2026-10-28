@@ -1,7 +1,10 @@
 package com.example.englishapp.ui.navigation
 
 import androidx.compose.runtime.Composable
+import android.widget.Toast
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -30,7 +33,7 @@ object Routes {
     const val LESSONS = "lessons"
     const val LESSON_DETAIL = "lesson_detail/{id}"
     const val QUIZ = "quiz/{id}"
-    const val VOCABULARY = "vocabulary"
+    const val VOCABULARY = "vocabulary/{topic}"
     const val PROFILE = "profile"
 }
 
@@ -50,6 +53,10 @@ private fun NavHostController.goToTab(tab: Tab) {
 @Composable
 fun AppNav() {
     val nav = rememberNavController()
+    val context = LocalContext.current
+    // La pantalla inicial se decide UNA sola vez. Si cambiara cada vez que cambia la sesión,
+    // la app saltaría sola al inicio justo después de registrarse.
+    val startRoute = remember { if (Session.user != null) Routes.HOME else Routes.LOGIN }
     val intArg = listOf(navArgument("id") { type = NavType.IntType })
 
     // Si ya había sesión guardada, cargamos su progreso al abrir la app.
@@ -57,7 +64,7 @@ fun AppNav() {
 
     NavHost(
         navController = nav,
-        startDestination = if (Session.user != null) Routes.HOME else Routes.LOGIN,
+        startDestination = startRoute,
     ) {
         composable(Routes.LOGIN) {
             LoginScreen(
@@ -67,7 +74,10 @@ fun AppNav() {
         }
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onRegistered = { nav.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } } },
+                onRegistered = {
+                    Toast.makeText(context, "Cuenta creada. Ahora inicia sesión.", Toast.LENGTH_LONG).show()
+                    nav.navigate(Routes.LOGIN) { popUpTo(Routes.LOGIN) { inclusive = true } }
+                },
                 onBack = { nav.popBackStack() },
             )
         }
@@ -94,7 +104,7 @@ fun AppNav() {
             LessonsScreen(
                 onBack = { nav.popBackStack() },
                 onLesson = { id -> nav.navigate("lesson_detail/$id") },
-                onVocabulary = { nav.navigate(Routes.VOCABULARY) },
+                onVocabulary = { topic -> nav.navigate("vocabulary/$topic") },
             )
         }
         composable(Routes.LESSON_DETAIL, arguments = intArg) { entry ->
@@ -107,14 +117,24 @@ fun AppNav() {
         }
         composable(Routes.QUIZ, arguments = intArg) { entry ->
             // Formulario propio de la lección: al terminar guarda el % del usuario.
+            val quizId = entry.arguments?.getInt("id")
             PracticeScreen(
-                lessonId = entry.arguments?.getInt("id"),
+                lessonId = quizId,
                 onClose = { nav.popBackStack() },
-                onFinish = { nav.popBackStack(Routes.LESSONS, inclusive = false) },
+                onFinish = {
+                    // Los temas de vocabulario (101, 102, 103) regresan al vocabulario; las lecciones, a la lista.
+                    if (quizId != null && quizId >= 100) nav.popBackStack(Routes.VOCABULARY, inclusive = false)
+                    else nav.popBackStack(Routes.LESSONS, inclusive = false)
+                },
             )
         }
-        composable(Routes.VOCABULARY) {
-            VocabularyScreen(onBack = { nav.popBackStack() }, onTab = nav::goToTab)
+        composable(Routes.VOCABULARY, arguments = listOf(navArgument("topic") { type = NavType.IntType })) { entry ->
+            VocabularyScreen(
+                initialTopic = entry.arguments?.getInt("topic") ?: 0,
+                onBack = { nav.popBackStack() },
+                onTab = nav::goToTab,
+                onQuiz = { id -> nav.navigate("quiz/$id") },
+            )
         }
     }
 }

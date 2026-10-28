@@ -1,5 +1,6 @@
 package com.example.englishapp.ui.screens
 
+import com.example.englishapp.data.VocabTopics
 import com.example.englishapp.data.LessonCatalog
 import com.example.englishapp.data.Session
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -162,21 +163,21 @@ fun ProgressScreen(onTab: (Tab) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MetricCard(
                     Modifier.weight(1f), Icons.Filled.Checklist,
-                    Color(0xFFECFDF5), Color(0xFF10B981), "Lecciones\ncompletadas", "${Session.completed} / ${LessonCatalog.size}",
+                    Color(0xFFECFDF5), Color(0xFF10B981), "Lecciones\ncompletadas", "${Session.completed} / ${Session.totalItems}",
                 )
                 MetricCard(
                     Modifier.weight(1f), Icons.Filled.AutoAwesome,
-                    Color(0xFFEFF6FF), Color(0xFF3B82F6), "Palabras aprendidas", "42",
+                    Color(0xFFEFF6FF), Color(0xFF3B82F6), "Palabras aprendidas", Session.stats.words.size.toString(),
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MetricCard(
                     Modifier.weight(1f), Icons.Filled.Schedule,
-                    Color(0xFFEEF2FF), Color(0xFF6366F1), "Tiempo de estudio", "4 h 28 min",
+                    Color(0xFFEEF2FF), Color(0xFF6366F1), "Tiempo de estudio", formatStudyTime(Session.stats.studySeconds),
                 )
                 MetricCard(
                     Modifier.weight(1f), Icons.Filled.LocalFireDepartment,
-                    Color(0xFFFFF1F2), Color(0xFFF43F5E), "Racha actual", "5 días",
+                    Color(0xFFFFF1F2), Color(0xFFF43F5E), "Racha actual", if (Session.streakShown == 1) "1 día" else "${Session.streakShown} días",
                 )
             }
 
@@ -260,8 +261,8 @@ private fun MetricCard(
 @Composable
 private fun LessonBreakdown() {
     val shape = RoundedCornerShape(16.dp)
-    LessonCatalog.forEach { l ->
-        val p = Session.progress[l.id]
+    breakdownRows().forEach { (id, title) ->
+        val p = Session.progress[id]
         val best = p?.best ?: 0
         Column(
             modifier = Modifier
@@ -272,7 +273,7 @@ private fun LessonBreakdown() {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${l.id}. ${l.title}", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(title, color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text("$best%", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
             Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(Color(0xFFDBEAFE))) {
@@ -285,4 +286,17 @@ private fun LessonBreakdown() {
             )
         }
     }
+}
+
+/** Filas de la pestaña "Por lección": las lecciones de gramática y los temas de vocabulario. */
+private fun breakdownRows(): List<Pair<Int, String>> =
+    LessonCatalog.map { it.id to "${it.id}. ${it.title}" } +
+        VocabTopics.map { it.id to "Vocabulario: ${it.name}" }
+
+/** 0 -> "0 min", 2700 -> "45 min", 16080 -> "4 h 28 min". */
+private fun formatStudyTime(seconds: Long): String {
+    val totalMin = seconds / 60
+    val h = totalMin / 60
+    val m = totalMin % 60
+    return if (h > 0) "$h h $m min" else "$m min"
 }

@@ -28,6 +28,7 @@ data class QuizQuestion(
     val options: List<String>,
     val answer: Int,
     val explanation: String,
+    val wordKey: String? = null,  // solo en vocabulario: palabra que se marca como aprendida al acertar
 )
 
 val LessonCatalog = listOf(

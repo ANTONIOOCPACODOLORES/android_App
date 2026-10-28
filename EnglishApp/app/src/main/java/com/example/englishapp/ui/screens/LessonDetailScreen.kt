@@ -1,5 +1,6 @@
 package com.example.englishapp.ui.screens
 
+import com.example.englishapp.ui.components.TrackStudyTime
 import com.example.englishapp.data.LessonCatalog
 import com.example.englishapp.data.LessonData
 
@@ -48,6 +49,7 @@ private val Body = Color(0xFF334155)
 
 @Composable
 fun LessonDetailScreen(lesson: LessonData, onBack: () -> Unit, onNext: () -> Unit) {
+    TrackStudyTime()
     Box(
         Modifier
             .fillMaxSize()
